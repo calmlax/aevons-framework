@@ -18,6 +18,7 @@ type Config struct {
 	Downstream DownstreamConfig
 	XSS        XSSConfig
 	CORS       CORSConfig
+	Swagger    SwaggerConfig
 }
 
 type DownstreamConfig struct {

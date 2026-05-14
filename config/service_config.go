@@ -5,4 +5,5 @@ type ServiceConfig struct {
 	Host string
 	Port int
 	Env  string
+	Mode string
 }
