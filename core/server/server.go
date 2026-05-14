@@ -5,6 +5,7 @@ import (
 	"github.com/calmlax/aevons-framework/xlog"
 
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	swagSpec "github.com/swaggo/swag"
@@ -29,13 +30,30 @@ func RegisterHealthRoute(r gin.IRoutes, serviceName string) {
 func RegisterOpenApiRoute(r gin.IRoutes, cfg *config.Config) {
 	if cfg.Swagger.Enabled {
 		r.GET("/apifox/openapi.json", func(c *gin.Context) {
-			doc, err := swagSpec.ReadDoc()
+			doc, err := loadOpenAPIDoc()
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
 			c.Data(http.StatusOK, "application/json; charset=utf-8", []byte(doc))
 		})
-		xlog.Info("apifox openapi:    http://localhost:%d/api/openapi.json", cfg.Server.Port)
+		xlog.Info("apifox openapi:    http://localhost:%d/apifox/openapi.json", cfg.Server.Port)
 	}
+}
+
+func loadOpenAPIDoc() (string, error) {
+	doc, err := swagSpec.ReadDoc()
+	if err == nil && doc != "" && doc != "{}" {
+		return doc, nil
+	}
+
+	data, readErr := os.ReadFile("api/openapi.json")
+	if readErr != nil {
+		if err != nil {
+			return "", err
+		}
+		return "", readErr
+	}
+
+	return string(data), nil
 }
