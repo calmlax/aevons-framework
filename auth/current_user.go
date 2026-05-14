@@ -41,6 +41,19 @@ func GetCurrentUserId(ctx context.Context) (int64, error) {
 	return id, nil
 }
 
+// GetCurrentIdentity 从 context.Context 中提取当前用户 Id 和用户名。
+func GetCurrentIdentity(ctx context.Context) (int64, string, error) {
+	if user, err := GetCurrentUser(ctx); err == nil {
+		return user.UserId, user.Username, nil
+	}
+
+	if userID, err := GetCurrentUserId(ctx); err == nil {
+		return userID, "", nil
+	}
+
+	return 0, "", ErrNoLoginUser
+}
+
 // GetCurrentRoleIds 从 context.Context 中提取当前用户的角色列表。
 func GetCurrentRoleIds(ctx context.Context) ([]int64, error) {
 	val := ctx.Value(consts.UserRoleKey)

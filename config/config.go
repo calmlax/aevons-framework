@@ -9,15 +9,14 @@ import (
 )
 
 type Config struct {
-	Server     ServerConfig     `yaml:"server"`
-	Consul     ConsulConfig     `yaml:"consul"`
-	DB         DBConfig         `yaml:"db"`
-	Redis      RedisConfig      `yaml:"redis"`
-	Downstream DownstreamConfig `yaml:"downstream"`
-	XSS        XSSConfig        `yaml:"xss"`
-	CORS       CORSConfig       `yaml:"cors"`
-	Swagger    SwaggerConfig    `yaml:"swagger"`
-	Auth       AuthConfig       `yaml:"auth"`
+	Server  ServerConfig  `yaml:"server"`
+	Consul  ConsulConfig  `yaml:"consul"`
+	DB      DBConfig      `yaml:"db"`
+	Redis   RedisConfig   `yaml:"redis"`
+	XSS     XSSConfig     `yaml:"xss"`
+	CORS    CORSConfig    `yaml:"cors"`
+	Swagger SwaggerConfig `yaml:"swagger"`
+	Auth    AuthConfig    `yaml:"auth"`
 }
 
 type sectionValues map[string]any
@@ -49,10 +48,11 @@ func Load(configDir, env string) (Config, error) {
 func defaultConfig(env string) Config {
 	return Config{
 		Server: ServerConfig{
-			Env:  env,
-			Host: "0.0.0.0",
-			Mode: "debug",
-			Port: 8080,
+			Env:      env,
+			Host:     "0.0.0.0",
+			Mode:     "debug",
+			Port:     8080,
+			GRPCPort: 0,
 		},
 		DB: DBConfig{
 			Driver:                 "mysql",
@@ -114,7 +114,6 @@ func (cfg *Config) merge(next Config, sections map[string]sectionValues) {
 	cfg.Consul.merge(next.Consul, sections["consul"])
 	cfg.DB.merge(next.DB, sections["db"])
 	cfg.Redis.merge(next.Redis, sections["redis"])
-	cfg.Downstream.merge(next.Downstream, sections["downstream"])
 	cfg.XSS.merge(next.XSS, sections["xss"])
 	cfg.CORS.merge(next.CORS, sections["cors"])
 	cfg.Swagger.merge(next.Swagger, sections["swagger"])

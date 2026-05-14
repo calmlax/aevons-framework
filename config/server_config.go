@@ -1,11 +1,12 @@
 package config
 
 type ServerConfig struct {
-	Name string `yaml:"name"`
-	Host string `yaml:"host"`
-	Port int    `yaml:"port"`
-	Env  string `yaml:"env"`
-	Mode string `yaml:"mode"`
+	Name     string `yaml:"name"`
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	GRPCPort int    `yaml:"grpc_port"`
+	Env      string `yaml:"env"`
+	Mode     string `yaml:"mode"`
 }
 
 func (cfg *ServerConfig) merge(next ServerConfig, section sectionValues) {
@@ -17,6 +18,9 @@ func (cfg *ServerConfig) merge(next ServerConfig, section sectionValues) {
 	}
 	if section.has("port") {
 		cfg.Port = next.Port
+	}
+	if section.has("grpc_port") {
+		cfg.GRPCPort = next.GRPCPort
 	}
 	if section.has("env") {
 		cfg.Env = next.Env
