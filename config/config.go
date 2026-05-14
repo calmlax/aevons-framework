@@ -16,6 +16,7 @@ type Config struct {
 	DB         DBConfig
 	Redis      RedisConfig
 	Downstream DownstreamConfig
+	XSS        XSSConfig
 }
 
 type ServiceConfig struct {
