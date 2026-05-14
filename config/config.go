@@ -17,6 +17,7 @@ type Config struct {
 	XSS        XSSConfig        `yaml:"xss"`
 	CORS       CORSConfig       `yaml:"cors"`
 	Swagger    SwaggerConfig    `yaml:"swagger"`
+	Auth       AuthConfig       `yaml:"auth"`
 }
 
 type sectionValues map[string]any

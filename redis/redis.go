@@ -48,14 +48,14 @@ var (
 var errClientNotInitialized = errors.New("redis client is not initialized")
 
 // Init 根据配置初始化 Redis 客户端，并通过 Ping 验证连接。
-func Init(cfg *config.Config) error {
+func Init(cfg *config.Config) (*redis.Client, error) {
 	if cfg == nil {
-		return errors.New("redis init: nil config")
+		return nil, errors.New("redis init: nil config")
 	}
 
 	client, rawClient, err := buildClient(cfg.Redis)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	universal = client
@@ -66,9 +66,9 @@ func Init(cfg *config.Config) error {
 
 	if err := universal.Ping(ctx).Err(); err != nil {
 		_ = Close()
-		return err
+		return nil, err
 	}
-	return nil
+	return Client, nil
 }
 
 // Raw returns the underlying go-redis client.
