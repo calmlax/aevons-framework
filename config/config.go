@@ -54,8 +54,12 @@ func defaultConfig(env string) Config {
 			Port: 8080,
 		},
 		Redis: RedisConfig{
-			Address:  "127.0.0.1:6379",
-			PoolSize: 10,
+			Mode:                "standalone",
+			Address:             "127.0.0.1:6379",
+			PoolSize:            10,
+			DialTimeoutSeconds:  5,
+			ReadTimeoutSeconds:  3,
+			WriteTimeoutSeconds: 3,
 		},
 		XSS: XSSConfig{
 			Enabled: true,
