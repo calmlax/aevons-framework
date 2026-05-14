@@ -1,48 +1,40 @@
 package config
 
 import (
-	"bufio"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
+
+	"github.com/goccy/go-yaml"
 )
 
 type Config struct {
-	Server     ServerConfig
-	Consul     ConsulConfig
-	DB         DBConfig
-	Redis      RedisConfig
-	Downstream DownstreamConfig
-	XSS        XSSConfig
-	CORS       CORSConfig
-	Swagger    SwaggerConfig
+	Server     ServerConfig     `yaml:"server"`
+	Consul     ConsulConfig     `yaml:"consul"`
+	DB         DBConfig         `yaml:"db"`
+	Redis      RedisConfig      `yaml:"redis"`
+	Downstream DownstreamConfig `yaml:"downstream"`
+	XSS        XSSConfig        `yaml:"xss"`
+	CORS       CORSConfig       `yaml:"cors"`
+	Swagger    SwaggerConfig    `yaml:"swagger"`
 }
 
-type DownstreamConfig struct {
-	TaskServiceURL     string
-	ResourceServiceURL string
-}
+type sectionValues map[string]any
 
 func Load(configDir, env string) (Config, error) {
-	cfg := Config{
-		Server: ServerConfig{
-			Env:  env,
-			Host: "0.0.0.0",
-		},
-	}
+	cfg := defaultConfig(env)
 
 	basePath := filepath.Join(configDir, "config.yaml")
-	if err := loadFile(basePath, &cfg); err != nil {
+	if err := mergeConfigFromFile(basePath, &cfg); err != nil {
 		return Config{}, err
 	}
 
-	overlayPath := filepath.Join(configDir, fmt.Sprintf("config.%s.yaml", env))
-	if _, err := os.Stat(overlayPath); err == nil {
-		if err := loadFile(overlayPath, &cfg); err != nil {
-			return Config{}, err
+	if env != "" {
+		overlayPath := filepath.Join(configDir, fmt.Sprintf("config.%s.yaml", env))
+		if _, err := os.Stat(overlayPath); err == nil {
+			if err := mergeConfigFromFile(overlayPath, &cfg); err != nil {
+				return Config{}, err
+			}
 		}
 	}
 
@@ -53,182 +45,96 @@ func Load(configDir, env string) (Config, error) {
 	return cfg, nil
 }
 
-func loadFile(path string, cfg *Config) error {
-	file, err := os.Open(path)
+func defaultConfig(env string) Config {
+	return Config{
+		Server: ServerConfig{
+			Env:  env,
+			Host: "0.0.0.0",
+			Mode: "debug",
+			Port: 8080,
+		},
+		Redis: RedisConfig{
+			Address:  "127.0.0.1:6379",
+			PoolSize: 10,
+		},
+		XSS: XSSConfig{
+			Enabled: true,
+		},
+		CORS: CORSConfig{
+			AllowedOrigins: []string{"*"},
+		},
+		Swagger: SwaggerConfig{
+			Enabled: false,
+		},
+	}
+}
+
+func mergeConfigFromFile(path string, cfg *Config) error {
+	next, sections, err := loadConfigFile(path)
 	if err != nil {
-		return fmt.Errorf("open config %s: %w", path, err)
+		return err
 	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	section := ""
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		if strings.HasSuffix(line, ":") && !strings.Contains(line, " ") {
-			section = strings.TrimSuffix(line, ":")
-			continue
-		}
-
-		key, value, ok := strings.Cut(line, ":")
-		if !ok {
-			return fmt.Errorf("invalid config line %q in %s", line, path)
-		}
-
-		key = strings.TrimSpace(key)
-		value = strings.Trim(strings.TrimSpace(value), "\"'")
-
-		switch section {
-		case "server":
-			if err := applyServerField(&cfg.Server, key, value); err != nil {
-				return fmt.Errorf("parse server config %s: %w", path, err)
-			}
-		case "consul":
-			if err := applyConsulField(&cfg.Consul, key, value); err != nil {
-				return fmt.Errorf("parse consul config %s: %w", path, err)
-			}
-		case "db":
-			applyDBField(&cfg.DB, key, value)
-		case "redis":
-			applyRedisField(&cfg.Redis, key, value)
-		case "downstream":
-			applyDownstreamField(&cfg.Downstream, key, value)
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("scan config %s: %w", path, err)
-	}
-
+	cfg.merge(next, sections)
 	return nil
 }
 
-func applyServerField(server *ServerConfig, key, value string) error {
-	switch key {
-	case "name":
-		server.Name = value
-	case "host":
-		server.Host = value
-	case "port":
-		port, err := strconv.Atoi(value)
-		if err != nil {
-			return fmt.Errorf("invalid port %q: %w", value, err)
+func loadConfigFile(path string) (Config, map[string]sectionValues, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Config{}, nil, fmt.Errorf("read config %s: %w", path, err)
+	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return Config{}, nil, fmt.Errorf("parse config %s: %w", path, err)
+	}
+
+	root := make(map[string]any)
+	if err := yaml.Unmarshal(data, &root); err != nil {
+		return Config{}, nil, fmt.Errorf("parse config keys %s: %w", path, err)
+	}
+
+	return cfg, extractSections(root), nil
+}
+
+func (cfg *Config) merge(next Config, sections map[string]sectionValues) {
+	cfg.Server.merge(next.Server, sections["server"])
+	cfg.Consul.merge(next.Consul, sections["consul"])
+	cfg.DB.merge(next.DB, sections["db"])
+	cfg.Redis.merge(next.Redis, sections["redis"])
+	cfg.Downstream.merge(next.Downstream, sections["downstream"])
+	cfg.XSS.merge(next.XSS, sections["xss"])
+	cfg.CORS.merge(next.CORS, sections["cors"])
+	cfg.Swagger.merge(next.Swagger, sections["swagger"])
+}
+
+func extractSections(root map[string]any) map[string]sectionValues {
+	sections := make(map[string]sectionValues, len(root))
+	for key := range root {
+		if section, ok := lookupSection(root, key); ok {
+			sections[key] = section
 		}
-		server.Port = port
-	case "env":
-		server.Env = value
 	}
-
-	return nil
+	return sections
 }
 
-func applyConsulField(consul *ConsulConfig, key, value string) error {
-	switch key {
-	case "address":
-		consul.Address = value
-	case "enabled":
-		enabled, err := strconv.ParseBool(value)
-		if err != nil {
-			return fmt.Errorf("invalid enabled value %q: %w", value, err)
-		}
-		consul.Enabled = enabled
+func lookupSection(root map[string]any, key string) (sectionValues, bool) {
+	sectionValue, ok := root[key]
+	if !ok {
+		return nil, false
 	}
-
-	return nil
+	section, ok := sectionValue.(map[string]any)
+	return section, ok
 }
 
-func applyDBField(db *DBConfig, key, value string) {
-	switch key {
-	case "driver":
-		db.Driver = value
-	case "dsn":
-		db.DSN = value
+func (section sectionValues) has(key string) bool {
+	if section == nil {
+		return false
 	}
-}
-
-func applyRedisField(redis *RedisConfig, key, value string) {
-	switch key {
-	case "address":
-		redis.Address = value
-	case "host":
-		redis.Address = value
-	}
-}
-
-func applyDownstreamField(downstream *DownstreamConfig, key, value string) {
-	switch key {
-	case "task_service_url":
-		downstream.TaskServiceURL = value
-	case "resource_service_url":
-		downstream.ResourceServiceURL = value
-	}
+	_, ok := section[key]
+	return ok
 }
 
 func (c Config) DBAddress() string {
-	driver := strings.TrimSpace(strings.ToLower(c.DB.Driver))
-	dsn := strings.TrimSpace(c.DB.DSN)
-	if driver == "" || dsn == "" {
-		return ""
-	}
-
-	switch driver {
-	case "mysql":
-		return parseMySQLAddress(dsn)
-	case "postgres", "postgresql":
-		return parsePostgresAddress(dsn)
-	default:
-		return ""
-	}
-}
-
-func parseMySQLAddress(dsn string) string {
-	const marker = "@tcp("
-	start := strings.Index(dsn, marker)
-	if start < 0 {
-		return ""
-	}
-	start += len(marker)
-	end := strings.Index(dsn[start:], ")")
-	if end < 0 {
-		return ""
-	}
-	return strings.TrimSpace(dsn[start : start+end])
-}
-
-func parsePostgresAddress(dsn string) string {
-	if strings.Contains(dsn, "://") {
-		u, err := url.Parse(dsn)
-		if err == nil {
-			host := u.Hostname()
-			port := u.Port()
-			if host != "" && port != "" {
-				return host + ":" + port
-			}
-			if host != "" {
-				return host + ":5432"
-			}
-		}
-	}
-
-	var host string
-	port := "5432"
-	for _, field := range strings.Fields(dsn) {
-		key, value, ok := strings.Cut(field, "=")
-		if !ok {
-			continue
-		}
-		switch key {
-		case "host":
-			host = value
-		case "port":
-			port = value
-		}
-	}
-	if host == "" {
-		return ""
-	}
-	return host + ":" + port
+	return c.DB.address()
 }

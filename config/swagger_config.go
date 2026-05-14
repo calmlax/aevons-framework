@@ -4,5 +4,11 @@ package config
 type SwaggerConfig struct {
 	// Enabled 控制是否暴露 /apifox/openapi.json 接口
 	// 生产环境务必设为 false 或不配置（默认 false）
-	Enabled bool `mapstructure:"enabled"`
+	Enabled bool `yaml:"enabled"`
+}
+
+func (cfg *SwaggerConfig) merge(next SwaggerConfig, section sectionValues) {
+	if section.has("enabled") {
+		cfg.Enabled = next.Enabled
+	}
 }
