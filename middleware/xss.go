@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"aevons-framework/config"
+	"github.com/calmlax/aevons-framework/config"
 
 	"github.com/gin-gonic/gin"
 	"github.com/microcosm-cc/bluemonday"

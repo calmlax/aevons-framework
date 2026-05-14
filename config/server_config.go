@@ -1,6 +1,6 @@
 package config
 
-type ServiceConfig struct {
+type ServerConfig struct {
 	Name string
 	Host string
 	Port int

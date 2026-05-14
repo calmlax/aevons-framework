@@ -11,7 +11,7 @@ import (
 )
 
 type Config struct {
-	Service    ServiceConfig
+	Server     ServerConfig
 	Consul     ConsulConfig
 	DB         DBConfig
 	Redis      RedisConfig
@@ -28,7 +28,7 @@ type DownstreamConfig struct {
 
 func Load(configDir, env string) (Config, error) {
 	cfg := Config{
-		Service: ServiceConfig{
+		Server: ServerConfig{
 			Env:  env,
 			Host: "0.0.0.0",
 		},
@@ -46,8 +46,8 @@ func Load(configDir, env string) (Config, error) {
 		}
 	}
 
-	if cfg.Service.Env == "" {
-		cfg.Service.Env = env
+	if cfg.Server.Env == "" {
+		cfg.Server.Env = env
 	}
 
 	return cfg, nil
@@ -82,9 +82,9 @@ func loadFile(path string, cfg *Config) error {
 		value = strings.Trim(strings.TrimSpace(value), "\"'")
 
 		switch section {
-		case "service":
-			if err := applyServiceField(&cfg.Service, key, value); err != nil {
-				return fmt.Errorf("parse service config %s: %w", path, err)
+		case "server":
+			if err := applyServerField(&cfg.Server, key, value); err != nil {
+				return fmt.Errorf("parse server config %s: %w", path, err)
 			}
 		case "consul":
 			if err := applyConsulField(&cfg.Consul, key, value); err != nil {
@@ -106,20 +106,20 @@ func loadFile(path string, cfg *Config) error {
 	return nil
 }
 
-func applyServiceField(service *ServiceConfig, key, value string) error {
+func applyServerField(server *ServerConfig, key, value string) error {
 	switch key {
 	case "name":
-		service.Name = value
+		server.Name = value
 	case "host":
-		service.Host = value
+		server.Host = value
 	case "port":
 		port, err := strconv.Atoi(value)
 		if err != nil {
 			return fmt.Errorf("invalid port %q: %w", value, err)
 		}
-		service.Port = port
+		server.Port = port
 	case "env":
-		service.Env = value
+		server.Env = value
 	}
 
 	return nil
