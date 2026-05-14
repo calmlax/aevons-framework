@@ -84,7 +84,7 @@ func (s *baseService[Model, Q]) Create(entity *Model) error {
 
 func (s *baseService[Model, Q]) Update(id int64, updates map[string]any) (*Model, error) {
 	if len(updates) == 0 {
-		return nil, errdef.ErrNoUpdateField
+		return nil, errdef.ErrorNoUpdateField
 	}
 	entity, err := s.repo.Update(id, updates)
 	if err != nil {
