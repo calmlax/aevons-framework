@@ -10,20 +10,21 @@ import (
 
 var errNilApp = errors.New("app is not initialized")
 
-// App 封装服务运行期共享的基础依赖。
+// App 作为应用装配层上下文，统一承载运行期共享基础依赖。
+// 该对象应尽量只在 main、bootstrap、module wiring 等装配层使用。
 type App struct {
-	Config     *config.Config
-	Redis      *redis.Client
-	DataSource *gorm.DB
+	config     *config.Config
+	redis      *redis.Client
+	dataSource *gorm.DB
 	// mq     *rocketmq.Client
 }
 
 // NewApp 创建应用运行时上下文，统一承载配置和基础组件。
 func NewApp(cfg *config.Config, redisClient *redis.Client, dataSource *gorm.DB) *App {
 	return &App{
-		Config:     cfg,
-		Redis:      redisClient,
-		DataSource: dataSource,
+		config:     cfg,
+		redis:      redisClient,
+		dataSource: dataSource,
 	}
 }
 
@@ -32,10 +33,10 @@ func (app *App) RawRedis() (*redis.Client, error) {
 	if app == nil {
 		return nil, errNilApp
 	}
-	if app.Redis == nil {
+	if app.redis == nil {
 		return nil, errors.New("redis client is not initialized")
 	}
-	return app.Redis, nil
+	return app.redis, nil
 }
 
 // RawConfig 返回底层配置对象。
@@ -43,10 +44,10 @@ func (app *App) RawConfig() (*config.Config, error) {
 	if app == nil {
 		return nil, errNilApp
 	}
-	if app.Config == nil {
+	if app.config == nil {
 		return nil, errors.New("config is not initialized")
 	}
-	return app.Config, nil
+	return app.config, nil
 }
 
 // RawDatabase 返回底层数据库连接。
@@ -54,8 +55,8 @@ func (app *App) RawDatabase() (*gorm.DB, error) {
 	if app == nil {
 		return nil, errNilApp
 	}
-	if app.DataSource == nil {
+	if app.dataSource == nil {
 		return nil, errors.New("database is not initialized")
 	}
-	return app.DataSource, nil
+	return app.dataSource, nil
 }
