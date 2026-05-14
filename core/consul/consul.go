@@ -2,6 +2,7 @@ package consul
 
 import (
 	"bytes"
+	"errors"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -28,6 +29,14 @@ type Registry struct {
 	httpClient *http.Client
 }
 
+// Managed 负责将健康等待、注册和注销封装为统一生命周期。
+type Managed struct {
+	registry   *Registry
+	serverCfg  config.ServerConfig
+	healthPath string
+	serviceID  string
+}
+
 // New 根据配置创建 Consul 注册中心客户端。
 func New(cfg config.ConsulConfig) (*Registry, error) {
 	baseURL, err := normalizeAddress(cfg.Address)
@@ -40,6 +49,56 @@ func New(cfg config.ConsulConfig) (*Registry, error) {
 			Timeout: 5 * time.Second,
 		},
 	}, nil
+}
+
+// NewManaged 创建一个带注册生命周期管理的 Consul 帮助对象。
+func NewManaged(consulCfg config.ConsulConfig, serverCfg config.ServerConfig, healthPath string) (*Managed, error) {
+	registry, err := New(consulCfg)
+	if err != nil {
+		return nil, err
+	}
+	if healthPath == "" {
+		healthPath = DefaultHealthPath
+	}
+	return &Managed{
+		registry:   registry,
+		serverCfg:  serverCfg,
+		healthPath: healthPath,
+	}, nil
+}
+
+// Register 等待健康接口就绪后再执行 Consul 注册。
+func (m *Managed) Register(timeout time.Duration) error {
+	if m == nil || m.registry == nil {
+		return nil
+	}
+
+	if err := waitForHealth(m.serverCfg.Host, m.serverCfg.Port, m.healthPath, timeout); err != nil {
+		return err
+	}
+
+	serviceID, err := m.registry.Register(m.serverCfg, m.healthPath)
+	if err != nil {
+		return err
+	}
+	m.serviceID = serviceID
+	return nil
+}
+
+// Deregister 注销当前已注册的服务实例。
+func (m *Managed) Deregister() error {
+	if m == nil || m.registry == nil {
+		return nil
+	}
+	return m.registry.Deregister(m.serviceID)
+}
+
+// Discover 查询当前服务名对应的健康实例。
+func (m *Managed) Discover() ([]Instance, error) {
+	if m == nil || m.registry == nil {
+		return nil, nil
+	}
+	return m.registry.Discover(m.serverCfg.Name)
 }
 
 // Register 将当前服务实例注册到 Consul。
@@ -191,4 +250,29 @@ func registrationAddress(host string) string {
 	default:
 		return strings.TrimSpace(host)
 	}
+}
+
+func waitForHealth(host string, port int, path string, timeout time.Duration) error {
+	address := host
+	switch address {
+	case "", "0.0.0.0", "::", "[::]":
+		address = "127.0.0.1"
+	}
+
+	deadline := time.Now().Add(timeout)
+	checkURL := fmt.Sprintf("http://%s:%d%s", address, port, path)
+	client := &http.Client{Timeout: 1 * time.Second}
+
+	for time.Now().Before(deadline) {
+		resp, err := client.Get(checkURL)
+		if err == nil {
+			resp.Body.Close()
+			if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
+				return nil
+			}
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	return errors.New("timeout waiting for health endpoint")
 }
