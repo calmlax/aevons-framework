@@ -5,11 +5,28 @@ import (
 	"strings"
 )
 
+// DBConfig 定义数据库连接与连接池配置。
 type DBConfig struct {
 	Driver string `yaml:"driver"`
-	DSN    string `yaml:"dsn"`
+	// Driver 数据库驱动名称，如 mysql、postgres。
+
+	DSN string `yaml:"dsn"`
+	// DSN 数据库连接串。
+
+	MaxOpenConns int `yaml:"max_open_conns"`
+	// MaxOpenConns 连接池允许的最大打开连接数。
+
+	MaxIdleConns int `yaml:"max_idle_conns"`
+	// MaxIdleConns 连接池允许保留的最大空闲连接数。
+
+	ConnMaxLifetimeSeconds int `yaml:"conn_max_lifetime_seconds"`
+	// ConnMaxLifetimeSeconds 单个连接的最大生命周期，单位为秒。
+
+	ConnMaxIdleTimeSeconds int `yaml:"conn_max_idle_time_seconds"`
+	// ConnMaxIdleTimeSeconds 空闲连接的最大保留时间，单位为秒。
 }
 
+// merge 将新配置中显式声明的数据库字段覆盖到当前配置。
 func (cfg *DBConfig) merge(next DBConfig, section sectionValues) {
 	if section.has("driver") {
 		cfg.Driver = next.Driver
@@ -17,8 +34,21 @@ func (cfg *DBConfig) merge(next DBConfig, section sectionValues) {
 	if section.has("dsn") {
 		cfg.DSN = next.DSN
 	}
+	if section.has("max_open_conns") {
+		cfg.MaxOpenConns = next.MaxOpenConns
+	}
+	if section.has("max_idle_conns") {
+		cfg.MaxIdleConns = next.MaxIdleConns
+	}
+	if section.has("conn_max_lifetime_seconds") {
+		cfg.ConnMaxLifetimeSeconds = next.ConnMaxLifetimeSeconds
+	}
+	if section.has("conn_max_idle_time_seconds") {
+		cfg.ConnMaxIdleTimeSeconds = next.ConnMaxIdleTimeSeconds
+	}
 }
 
+// address 解析当前 DSN 对应的数据库地址，主要用于探活、展示或运维辅助场景。
 func (cfg DBConfig) address() string {
 	driver := strings.TrimSpace(strings.ToLower(cfg.Driver))
 	dsn := strings.TrimSpace(cfg.DSN)
@@ -36,6 +66,7 @@ func (cfg DBConfig) address() string {
 	}
 }
 
+// mysqlAddressFromDSN 从 MySQL DSN 中提取 host:port。
 func mysqlAddressFromDSN(dsn string) string {
 	const marker = "@tcp("
 	start := strings.Index(dsn, marker)
@@ -50,6 +81,7 @@ func mysqlAddressFromDSN(dsn string) string {
 	return strings.TrimSpace(dsn[start : start+end])
 }
 
+// postgresAddressFromDSN 从 PostgreSQL DSN 中提取 host:port。
 func postgresAddressFromDSN(dsn string) string {
 	if strings.Contains(dsn, "://") {
 		u, err := url.Parse(dsn)

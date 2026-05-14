@@ -53,6 +53,13 @@ func defaultConfig(env string) Config {
 			Mode: "debug",
 			Port: 8080,
 		},
+		DB: DBConfig{
+			Driver:                 "mysql",
+			MaxOpenConns:           20,
+			MaxIdleConns:           10,
+			ConnMaxLifetimeSeconds: 3600,
+			ConnMaxIdleTimeSeconds: 1800,
+		},
 		Redis: RedisConfig{
 			Mode:                "standalone",
 			Address:             "127.0.0.1:6379",
