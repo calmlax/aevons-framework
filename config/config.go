@@ -19,30 +19,6 @@ type Config struct {
 	XSS        XSSConfig
 }
 
-type ServiceConfig struct {
-	Name string
-	Host string
-	Port int
-	Env  string
-}
-
-type ConsulConfig struct {
-	Address string
-	Enabled bool
-}
-
-type DBConfig struct {
-	Driver string
-	DSN    string
-}
-
-type RedisConfig struct {
-	Address  string
-	Password string
-	PoolSize int
-	DB       int
-}
-
 type DownstreamConfig struct {
 	TaskServiceURL     string
 	ResourceServiceURL string
