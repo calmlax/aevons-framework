@@ -17,6 +17,7 @@ type Config struct {
 	Redis      RedisConfig
 	Downstream DownstreamConfig
 	XSS        XSSConfig
+	CORS       CORSConfig
 }
 
 type DownstreamConfig struct {
