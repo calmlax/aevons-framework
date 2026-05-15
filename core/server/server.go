@@ -28,7 +28,7 @@ func RegisterHealthRoute(r gin.IRoutes, serviceName string) {
 
 // RegisterOpenApiRoute registers the default OpenAPI endpoint for Consul and probes.
 func RegisterOpenApiRoute(r gin.IRoutes, cfg *config.Config) {
-	r.GET("/apifox/openapi.json", func(c *gin.Context) {
+	r.GET("/api/openapi.json", func(c *gin.Context) {
 		doc, err := loadOpenAPIDoc()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
