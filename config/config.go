@@ -9,14 +9,15 @@ import (
 )
 
 type Config struct {
-	Server  ServerConfig  `yaml:"server"`
-	Consul  ConsulConfig  `yaml:"consul"`
-	DB      DBConfig      `yaml:"db"`
-	Redis   RedisConfig   `yaml:"redis"`
-	XSS     XSSConfig     `yaml:"xss"`
-	CORS    CORSConfig    `yaml:"cors"`
-	Swagger SwaggerConfig `yaml:"swagger"`
-	Auth    AuthConfig    `yaml:"auth"`
+	Server   ServerConfig   `yaml:"server"`
+	Consul   ConsulConfig   `yaml:"consul"`
+	DB       DBConfig       `yaml:"db"`
+	Redis    RedisConfig    `yaml:"redis"`
+	XSS      XSSConfig      `yaml:"xss"`
+	CORS     CORSConfig     `yaml:"cors"`
+	Swagger  SwaggerConfig  `yaml:"swagger"`
+	Auth     AuthConfig     `yaml:"auth"`
+	WebAuthn WebAuthnConfig `yaml:"webauthn"`
 }
 
 type sectionValues map[string]any
@@ -123,6 +124,7 @@ func (cfg *Config) merge(next Config, sections map[string]sectionValues) {
 	cfg.CORS.merge(next.CORS, sections["cors"])
 	cfg.Swagger.merge(next.Swagger, sections["swagger"])
 	cfg.Auth.merge(next.Auth, sections["auth"])
+	cfg.WebAuthn.merge(next.WebAuthn, sections["webauthn"])
 }
 
 func extractSections(root map[string]any) map[string]sectionValues {
