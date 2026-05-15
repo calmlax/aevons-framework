@@ -78,6 +78,11 @@ func defaultConfig(env string) Config {
 		Swagger: SwaggerConfig{
 			Enabled: false,
 		},
+		Auth: AuthConfig{
+			AccessTokenTTL:  7200,
+			RefreshTokenTTL: 604800,
+			EmailCodeTTL:    300,
+		},
 	}
 }
 
@@ -117,6 +122,7 @@ func (cfg *Config) merge(next Config, sections map[string]sectionValues) {
 	cfg.XSS.merge(next.XSS, sections["xss"])
 	cfg.CORS.merge(next.CORS, sections["cors"])
 	cfg.Swagger.merge(next.Swagger, sections["swagger"])
+	cfg.Auth.merge(next.Auth, sections["auth"])
 }
 
 func extractSections(root map[string]any) map[string]sectionValues {
