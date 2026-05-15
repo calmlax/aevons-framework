@@ -15,7 +15,6 @@ type Config struct {
 	Redis    RedisConfig    `yaml:"redis"`
 	XSS      XSSConfig      `yaml:"xss"`
 	CORS     CORSConfig     `yaml:"cors"`
-	Swagger  SwaggerConfig  `yaml:"swagger"`
 	Auth     AuthConfig     `yaml:"auth"`
 	WebAuthn WebAuthnConfig `yaml:"webauthn"`
 }
@@ -75,9 +74,6 @@ func defaultConfig(env string) Config {
 		},
 		CORS: CORSConfig{
 			AllowedOrigins: []string{"*"},
-		},
-		Swagger: SwaggerConfig{
-			Enabled: false,
 		},
 		Auth: AuthConfig{
 			AccessTokenTTL:  7200,
