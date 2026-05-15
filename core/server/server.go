@@ -28,7 +28,7 @@ func RegisterHealthRoute(r gin.IRoutes, serviceName string) {
 
 // RegisterOpenApiRoute registers the default OpenAPI endpoint for Consul and probes.
 func RegisterOpenApiRoute(r gin.IRoutes, cfg *config.Config) {
-	r.GET("/api/openapi.json", func(c *gin.Context) {
+	r.GET("/api/swagger.json", func(c *gin.Context) {
 		doc, err := loadOpenAPIDoc()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -36,7 +36,7 @@ func RegisterOpenApiRoute(r gin.IRoutes, cfg *config.Config) {
 		}
 		c.Data(http.StatusOK, "application/json; charset=utf-8", []byte(doc))
 	})
-	xlog.Info("apifox openapi:    http://localhost:%d/apifox/openapi.json", cfg.Server.Port)
+	xlog.Info("swagger json:      http://localhost:%d/api/swagger.json", cfg.Server.Port)
 }
 
 func loadOpenAPIDoc() (string, error) {
@@ -45,7 +45,7 @@ func loadOpenAPIDoc() (string, error) {
 		return doc, nil
 	}
 
-	data, readErr := os.ReadFile("api/openapi.json")
+	data, readErr := os.ReadFile("api/swagger.json")
 	if readErr != nil {
 		if err != nil {
 			return "", err
