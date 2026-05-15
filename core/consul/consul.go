@@ -2,11 +2,12 @@ package consul
 
 import (
 	"bytes"
-	"errors"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +22,9 @@ type Instance struct {
 	Name    string
 	Address string
 	Port    int
+	// GRPCPort 来自 Consul Service.Meta.grpc_port。
+	// 当服务同时暴露 HTTP 与 gRPC 端口时，调用方应优先使用这个端口建立 gRPC 连接。
+	GRPCPort int
 }
 
 // Registry 提供 Consul 注册、注销和发现能力。
@@ -102,6 +106,8 @@ func (m *Managed) Discover() ([]Instance, error) {
 }
 
 // Register 将当前服务实例注册到 Consul。
+// 除了注册 HTTP 健康检查地址外，还会把 gRPC 端口写入 Service.Meta，
+// 供其他服务通过 Consul 发现后建立 gRPC 连接。
 func (r *Registry) Register(serverCfg config.ServerConfig, healthPath string) (string, error) {
 	if r == nil {
 		return "", nil
@@ -130,6 +136,9 @@ func (r *Registry) Register(serverCfg config.ServerConfig, healthPath string) (s
 		"Name":    serviceName,
 		"Address": address,
 		"Port":    serverCfg.Port,
+		"Meta": map[string]string{
+			"grpc_port": fmt.Sprintf("%d", serverCfg.GRPCPort),
+		},
 		"Check": map[string]any{
 			"HTTP":                           fmt.Sprintf("http://%s:%d%s", address, serverCfg.Port, healthPath),
 			"Method":                         "GET",
@@ -167,6 +176,7 @@ func (r *Registry) Deregister(serviceID string) error {
 }
 
 // Discover 查询指定服务当前健康实例。
+// 如果实例在注册时带了 grpc_port 元信息，这里会一并解析出来。
 func (r *Registry) Discover(serviceName string) ([]Instance, error) {
 	if r == nil {
 		return nil, nil
@@ -183,10 +193,11 @@ func (r *Registry) Discover(serviceName string) ([]Instance, error) {
 
 	var entries []struct {
 		Service struct {
-			ID      string `json:"ID"`
-			Service string `json:"Service"`
-			Address string `json:"Address"`
-			Port    int    `json:"Port"`
+			ID      string            `json:"ID"`
+			Service string            `json:"Service"`
+			Address string            `json:"Address"`
+			Port    int               `json:"Port"`
+			Meta    map[string]string `json:"Meta"`
 		} `json:"Service"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
@@ -195,11 +206,18 @@ func (r *Registry) Discover(serviceName string) ([]Instance, error) {
 
 	instances := make([]Instance, 0, len(entries))
 	for _, entry := range entries {
+		grpcPort := 0
+		if rawPort := entry.Service.Meta["grpc_port"]; rawPort != "" {
+			if parsedPort, convErr := strconv.Atoi(rawPort); convErr == nil {
+				grpcPort = parsedPort
+			}
+		}
 		instances = append(instances, Instance{
-			ID:      entry.Service.ID,
-			Name:    entry.Service.Service,
-			Address: entry.Service.Address,
-			Port:    entry.Service.Port,
+			ID:       entry.Service.ID,
+			Name:     entry.Service.Service,
+			Address:  entry.Service.Address,
+			Port:     entry.Service.Port,
+			GRPCPort: grpcPort,
 		})
 	}
 	return instances, nil
@@ -226,6 +244,7 @@ func (r *Registry) put(path string, payload any) error {
 	return nil
 }
 
+// normalizeAddress 将配置中的 Consul 地址标准化为可直接发 HTTP 请求的 baseURL。
 func normalizeAddress(rawAddress string) (string, error) {
 	address := strings.TrimSpace(rawAddress)
 	if address == "" {
@@ -243,6 +262,8 @@ func normalizeAddress(rawAddress string) (string, error) {
 	return "http://" + address, nil
 }
 
+// registrationAddress 生成注册到 Consul 的服务地址。
+// 对 0.0.0.0、:: 这类监听地址，会回退为 127.0.0.1，避免注册出不可访问的通配地址。
 func registrationAddress(host string) string {
 	switch strings.TrimSpace(host) {
 	case "", "0.0.0.0", "::", "[::]":
@@ -252,6 +273,8 @@ func registrationAddress(host string) string {
 	}
 }
 
+// waitForHealth 在注册到 Consul 前等待本地健康检查接口 ready，
+// 避免服务刚启动时就因为探测过早而被标记为不健康。
 func waitForHealth(host string, port int, path string, timeout time.Duration) error {
 	address := host
 	switch address {
