@@ -118,7 +118,6 @@ func (cfg *Config) merge(next Config, sections map[string]sectionValues) {
 	cfg.Redis.merge(next.Redis, sections["redis"])
 	cfg.XSS.merge(next.XSS, sections["xss"])
 	cfg.CORS.merge(next.CORS, sections["cors"])
-	cfg.Swagger.merge(next.Swagger, sections["swagger"])
 	cfg.Auth.merge(next.Auth, sections["auth"])
 	cfg.WebAuthn.merge(next.WebAuthn, sections["webauthn"])
 }
