@@ -32,6 +32,10 @@ func Init(cfg *config.Config) (*gorm.DB, error) {
 		return nil, err
 	}
 
+	if err := registerCallbacks(gdb); err != nil {
+		return nil, err
+	}
+
 	sqlDB, err := gdb.DB()
 	if err != nil {
 		return nil, err
