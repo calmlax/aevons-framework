@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strconv"
 
-	errdef "github.com/calmlax/aevons-framework/err"
+	apperr "github.com/calmlax/aevons-framework/errors"
 	"github.com/calmlax/aevons-framework/response"
 	"github.com/calmlax/aevons-framework/utils"
 
@@ -36,7 +36,7 @@ func (h *BaseHandler[M, Q, C, U]) List(c *gin.Context) {
 	q, _ := bindQuery[Q](c)
 	list, err := h.srv.List(q)
 	if err != nil {
-		h.Fail(c, errdef.ErrQueryFailed)
+		h.Fail(c, apperr.ErrQueryFailed)
 		return
 	}
 	h.Success(c, list)
@@ -47,7 +47,7 @@ func (h *BaseHandler[M, Q, C, U]) Page(c *gin.Context) {
 	q, _ := bindQuery[Q](c)
 	res, err := h.srv.Page(q)
 	if err != nil {
-		h.Fail(c, errdef.ErrQueryFailed)
+		h.Fail(c, apperr.ErrQueryFailed)
 		return
 	}
 	h.Success(c, res)
@@ -62,7 +62,7 @@ func (h *BaseHandler[M, Q, C, U]) Get(c *gin.Context) {
 
 	info, err := h.srv.GetById(id)
 	if err != nil {
-		h.Fail(c, errdef.ErrQueryFailed)
+		h.Fail(c, apperr.ErrQueryFailed)
 		return
 	}
 	h.Success(c, info)
@@ -80,7 +80,7 @@ func (h *BaseHandler[M, Q, C, U]) Create(c *gin.Context) {
 
 	err := h.srv.Create(&m)
 	if err != nil {
-		h.Fail(c, errdef.ErrCreateFailed)
+		h.Fail(c, apperr.ErrCreateFailed)
 		return
 	}
 	h.Success(c, m)
@@ -99,7 +99,7 @@ func (h *BaseHandler[M, Q, C, U]) Update(c *gin.Context) {
 	mp := utils.StructToMapIgnoreNil(dto)
 	_, err := h.srv.Update(id, mp)
 	if err != nil {
-		h.Fail(c, errdef.ErrUpdateFailed)
+		h.Fail(c, apperr.ErrUpdateFailed)
 		return
 	}
 	h.Success(c, id)
@@ -114,7 +114,7 @@ func (h *BaseHandler[M, Q, C, U]) Delete(c *gin.Context) {
 	err := h.srv.Delete(id)
 
 	if err != nil {
-		h.Fail(c, errdef.ErrDeleteFailed)
+		h.Fail(c, apperr.ErrDeleteFailed)
 		return
 	}
 	h.Success(c, id)
@@ -128,7 +128,7 @@ func (h *BaseHandler[M, Q, C, U]) BatchDelete(c *gin.Context) {
 	}
 	err := h.srv.BatchDelete(ids)
 	if err != nil {
-		h.Fail(c, errdef.ErrDeleteFailed)
+		h.Fail(c, apperr.ErrDeleteFailed)
 		return
 	}
 	h.Success(c, ids)
@@ -149,7 +149,7 @@ func bindQuery[Q BaseQueryInterface](c *gin.Context) (Q, bool) {
 
 	// 绑定参数
 	if err := c.ShouldBindQuery(qVal.Interface()); err != nil {
-		response.FailBy(c, errdef.ErrInvalidQuery)
+		response.FailBy(c, apperr.ErrInvalidQuery)
 		return *new(Q), false
 	}
 
@@ -159,7 +159,7 @@ func bindQuery[Q BaseQueryInterface](c *gin.Context) (Q, bool) {
 
 func (bh *BaseHandlerCommon) BindJSON(c *gin.Context, obj any) bool {
 	if err := c.ShouldBindJSON(obj); err != nil {
-		response.FailBy(c, errdef.ErrInvalidBody)
+		response.FailBy(c, apperr.ErrInvalidBody)
 		return false
 	}
 	return true
@@ -169,7 +169,7 @@ func (bh *BaseHandlerCommon) GetId(c *gin.Context) (int64, bool) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		response.FailBy(c, errdef.ErrInvalidId)
+		response.FailBy(c, apperr.ErrInvalidId)
 		return 0, false
 	}
 	return id, true
@@ -179,7 +179,7 @@ func (bh *BaseHandlerCommon) GetIds(c *gin.Context) ([]int64, bool) {
 	idsStr := c.Param("ids")
 	ids, err := utils.StrToNumberArray[int64](idsStr, ",")
 	if err != nil {
-		response.FailBy(c, errdef.ErrInvalidId)
+		response.FailBy(c, apperr.ErrInvalidId)
 		return nil, false
 	}
 	return ids, true
@@ -189,6 +189,6 @@ func (bh *BaseHandlerCommon) Success(c *gin.Context, data any) {
 	response.Success(c, data)
 }
 
-func (bh *BaseHandlerCommon) Fail(c *gin.Context, errDef errdef.ErrorDef) {
+func (bh *BaseHandlerCommon) Fail(c *gin.Context, errDef apperr.ErrorDef) {
 	response.FailBy(c, errDef)
 }

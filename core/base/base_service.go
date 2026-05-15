@@ -3,7 +3,7 @@ package base
 import (
 	"errors"
 
-	errdef "github.com/calmlax/aevons-framework/err"
+	apperr "github.com/calmlax/aevons-framework/errors"
 
 	"gorm.io/gorm"
 )
@@ -71,7 +71,7 @@ func (s *baseService[Model, Q]) GetById(id int64) (*Model, error) {
 	entity, err := s.repo.GetById(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errdef.ErrNotFound
+			return nil, apperr.ErrNotFound
 		}
 		return nil, err
 	}
@@ -84,12 +84,12 @@ func (s *baseService[Model, Q]) Create(entity *Model) error {
 
 func (s *baseService[Model, Q]) Update(id int64, updates map[string]any) (*Model, error) {
 	if len(updates) == 0 {
-		return nil, errdef.ErrorNoUpdateField
+		return nil, apperr.ErrorNoUpdateField
 	}
 	entity, err := s.repo.Update(id, updates)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errdef.ErrNotFound
+			return nil, apperr.ErrNotFound
 		}
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (s *baseService[Model, Q]) Update(id int64, updates map[string]any) (*Model
 func (s *baseService[Model, Q]) Delete(id int64) error {
 	if err := s.repo.Delete(id); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errdef.ErrNotFound
+			return apperr.ErrNotFound
 		}
 		return err
 	}

@@ -4,37 +4,37 @@ import (
 	"errors"
 	"strings"
 
-	errdef "github.com/calmlax/aevons-framework/err"
+	apperr "github.com/calmlax/aevons-framework/errors"
 
 	"github.com/go-playground/validator/v10"
 )
 
 // GetValidateErrorKey 解析校验错误 → 返回多语言key
-func GetValidateErrorKey(err error) (*errdef.ErrorDef, string) {
+func GetValidateErrorKey(err error) (*apperr.ErrorDef, string) {
 	var validationErrs validator.ValidationErrors
 	if !errors.As(err, &validationErrs) {
-		return &errdef.ErrInvalidBody, ""
+		return &apperr.ErrInvalidBody, ""
 	}
 
-	var errDef errdef.ErrorDef
+	var errDef apperr.ErrorDef
 	// 取第一个错误
 	e := validationErrs[0]
 	field := strings.ToLower(e.Field()) // 转小驼峰给前端用
 	switch e.Tag() {
 	case "required":
-		errDef = errdef.ErrValidationRequired
+		errDef = apperr.ErrValidationRequired
 	case "max":
-		errDef = errdef.ErrValidationMax
+		errDef = apperr.ErrValidationMax
 	case "min":
-		errDef = errdef.ErrValidationMin
+		errDef = apperr.ErrValidationMin
 	case "oneof":
-		errDef = errdef.ErrValidationOneof
+		errDef = apperr.ErrValidationOneof
 	case "email":
-		errDef = errdef.ErrValidationEmail
+		errDef = apperr.ErrValidationEmail
 	case "phone":
-		errDef = errdef.ErrValidationPhone
+		errDef = apperr.ErrValidationPhone
 	default:
-		errDef = errdef.ErrInvalidBody
+		errDef = apperr.ErrInvalidBody
 	}
 
 	return &errDef, field

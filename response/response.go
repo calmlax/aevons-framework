@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/calmlax/aevons-framework/err"
+	apperr "github.com/calmlax/aevons-framework/errors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -48,11 +48,11 @@ func Fail(c *gin.Context, httpStatus int, code int, message string, args ...map[
 }
 
 // FailByErr 使用统一封装的 ErrorDef 常量结构体快速输出标准的错误 JSON 响应。
-func FailByErr(c *gin.Context, httpStatus int, errDef err.ErrorDef, args ...map[string]any) {
+func FailByErr(c *gin.Context, httpStatus int, errDef apperr.ErrorDef, args ...map[string]any) {
 	Fail(c, httpStatus, errDef.Code, errDef.Key, args...)
 }
 
-func FailBy(c *gin.Context, errDef err.ErrorDef, args ...map[string]any) {
+func FailBy(c *gin.Context, errDef apperr.ErrorDef, args ...map[string]any) {
 	Fail(c, errDef.HttpStatus, errDef.Code, errDef.Key, args...)
 }
 
